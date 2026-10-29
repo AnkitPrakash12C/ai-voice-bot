@@ -1,0 +1,20 @@
+{
+  "name": "personal-ai-voice-bot",
+  "version": "1.0.0",
+  "description": "Personal AI voice bot. Express backend + Gemini + browser-native voice.",
+  "private": true,
+  "type": "module",
+  "main": "server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@google/genai": "^2.32.0",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0"
+  }
+}

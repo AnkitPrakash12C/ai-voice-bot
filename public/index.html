@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>AI Voice Interview</title>
+<meta name="description" content="Talk to my personal AI voice interview bot for the Generative AI Assessment.">
+<style>
+  :root {
+    --bg: #0b0f1a;
+    --bg-2: #111827;
+    --panel: #151c2c;
+    --panel-2: #1b2438;
+    --border: #263250;
+    --text: #e8ecf6;
+    --muted: #93a0bd;
+    --accent: #7c9cff;
+    --accent-2: #5eead4;
+    --danger: #ff6b81;
+    --warn: #fbbf24;
+    --user: #25356b;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: radial-gradient(1200px 600px at 10% -10%, #18214a 0%, transparent 60%),
+                radial-gradient(900px 500px at 110% 10%, #0f3a3a 0%, transparent 55%), var(--bg);
+    color: var(--text);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Devanagari", sans-serif;
+    display: flex; justify-content: center;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  }
+  .app { width: 100%; max-width: 860px; display: flex; flex-direction: column; gap: 14px; min-height: 100%; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 1.25rem; margin: 0; letter-spacing: .2px; }
+  .sub { color: var(--muted); font-size: .85rem; margin-top: 2px; }
+  .badge { font-size: .75rem; color: var(--accent-2); border: 1px solid #1f4d49; background: #0d2a2a; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+
+  .settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; align-items: end; }
+  label { display: block; font-size: .75rem; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .06em; }
+  select, input[type=text], button { font: inherit; color: var(--text); }
+  select, input[type=text] {
+    width: 100%; background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; outline: none;
+  }
+  select:focus, input[type=text]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,156,255,.2); }
+  .row-btns { display: flex; gap: 8px; }
+  .btn {
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; cursor: pointer;
+    transition: background .15s, border-color .15s, transform .05s; white-space: nowrap;
+  }
+  .btn:hover:not(:disabled) { border-color: var(--accent); background: #212c47; }
+  .btn:active:not(:disabled) { transform: translateY(1px); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.active { border-color: var(--danger); color: #ffd3da; }
+  .btn.primary { background: linear-gradient(135deg, #5d7bff, #7c9cff); border-color: transparent; color: #0a1030; font-weight: 600; }
+  .btn.primary:hover:not(:disabled) { filter: brightness(1.08); }
+
+  .stage { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 18px 14px; }
+  .mic-wrap { position: relative; width: 108px; height: 108px; display: grid; place-items: center; }
+  .mic {
+    width: 84px; height: 84px; border-radius: 50%; border: none; cursor: pointer; display: grid; place-items: center;
+    background: linear-gradient(145deg, #6b8bff, #4b63d6); color: #fff; z-index: 2;
+    box-shadow: 0 10px 30px rgba(92,120,255,.35); transition: transform .1s, filter .15s;
+  }
+  .mic:hover:not(:disabled) { filter: brightness(1.1); }
+  .mic:active:not(:disabled) { transform: scale(.96); }
+  .mic:disabled { background: #2a3350; box-shadow: none; cursor: not-allowed; color: #7f8ba8; }
+  .mic svg { width: 34px; height: 34px; }
+  .mic.listening { background: linear-gradient(145deg, #ff6b81, #e0405a); box-shadow: 0 10px 30px rgba(255,107,129,.4); }
+  .pulse { position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--danger); opacity: 0; z-index: 1; pointer-events: none; }
+  .mic-wrap.listening .pulse { animation: pulse 1.6s ease-out infinite; }
+  .mic-wrap.listening .pulse.p2 { animation-delay: .8s; }
+  @keyframes pulse { 0% { transform: scale(.78); opacity: .8; } 100% { transform: scale(1.25); opacity: 0; } }
+  .status { min-height: 1.5em; color: var(--muted); font-size: .92rem; text-align: center; }
+  .status.err { color: var(--danger); }
+  .status.warn { color: var(--warn); }
+  .status.ok { color: var(--accent-2); }
+  .interim { min-height: 1.4em; color: var(--text); font-style: italic; opacity: .85; text-align: center; max-width: 90%; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    background: var(--bg-2); border: 1px solid var(--border); color: var(--text); padding: 9px 13px; border-radius: 999px;
+    cursor: pointer; font-size: .88rem; text-align: left; transition: border-color .15s, background .15s;
+  }
+  .chip:hover:not(:disabled) { border-color: var(--accent-2); background: #12253a; }
+  .chip:disabled { opacity: .45; cursor: not-allowed; }
+  .chips-title { font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+
+  .chat {
+    flex: 1; min-height: 220px; max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
+    padding: 4px 2px; scroll-behavior: smooth;
+  }
+  .empty { margin: auto; color: var(--muted); text-align: center; font-size: .92rem; padding: 18px; }
+  .msg { max-width: 86%; padding: 10px 14px; border-radius: 14px; white-space: pre-wrap; word-wrap: break-word; }
+  .msg .who { display: block; font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 2px; }
+  .msg.user { align-self: flex-end; background: var(--user); border-bottom-right-radius: 4px; }
+  .msg.bot { align-self: flex-start; background: var(--panel-2); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+  .msg.error { align-self: center; background: #3a1620; border: 1px solid #6d2535; color: #ffd3da; text-align: center; }
+  .msg.typing { color: var(--muted); }
+  .dots span { display: inline-block; width: 6px; height: 6px; margin: 0 2px; background: var(--muted); border-radius: 50%; animation: bounce 1.2s infinite; }
+  .dots span:nth-child(2) { animation-delay: .15s; }
+  .dots span:nth-child(3) { animation-delay: .3s; }
+  @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); opacity: .5; } 40% { transform: translateY(-5px); opacity: 1; } }
+
+  form.input-row { display: flex; gap: 8px; }
+  .foot { color: var(--muted); font-size: .75rem; text-align: center; padding-bottom: 6px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (max-width: 520px) { .msg { max-width: 94%; } .chat { max-height: 40vh; } }
+  @media (prefers-reduced-motion: reduce) { .pulse, .dots span { animation: none !important; } .chat { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+<main class="app">
+  <header>
+    <div>
+      <h1>Personal AI Voice Assistant</h1>
+    </div>
+    <span class="badge" id="modelBadge">Voice ready</span>
+  </header>
+
+  <section class="card settings" aria-label="Voice settings">
+    <div>
+      <label for="accent">Speech recognition accent</label>
+      <select id="accent">
+        <option value="en-IN" selected>Indian English (en-IN)</option>
+        <option value="en-US">US English (en-US)</option>
+        <option value="en-GB">UK English (en-GB)</option>
+      </select>
+    </div>
+    <div>
+      <label for="voice">Answer voice</label>
+      <select id="voice"><option>Loading voices...</option></select>
+    </div>
+    <div class="row-btns">
+      <button class="btn" id="muteBtn" type="button" title="Stop speaking and mute answers">Stop / Mute</button>
+      <button class="btn" id="clearBtn" type="button" title="Clear conversation">Clear</button>
+    </div>
+  </section>
+
+  <section class="card stage" aria-label="Microphone">
+    <div class="mic-wrap" id="micWrap">
+      <span class="pulse"></span><span class="pulse p2"></span>
+      <button class="mic" id="micBtn" type="button" aria-label="Start speaking" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="9" y="2" width="6" height="12" rx="3"></rect>
+          <path d="M5 11a7 7 0 0 0 14 0"></path><path d="M12 18v4"></path><path d="M8 22h8"></path>
+        </svg>
+      </button>
+    </div>
+    <div class="interim" id="interim" aria-live="polite"></div>
+    <div class="status" id="status" role="status" aria-live="polite">Tap the mic and ask your question, or pick one below.</div>
+  </section>
+
+  <section class="card" aria-label="Preset questions">
+    <div class="chips-title">One-click questions</div>
+    <div class="chips" id="chips"></div>
+  </section>
+
+  <section class="card" aria-label="Conversation">
+    <div class="chat" id="chat" aria-live="polite">
+      <div class="empty" id="empty">Your conversation will appear here.</div>
+    </div>
+    <form class="input-row" id="textForm" autocomplete="off" style="margin-top:12px">
+      <label for="textInput" class="sr-only">Type a question</label>
+      <input type="text" id="textInput" placeholder="Or type a question and press Enter..." maxlength="600" enterkeyhint="send">
+      <button class="btn primary" id="sendBtn" type="submit">Send</button>
+    </form>
+  </section>
+
+  <div class="foot">Voice input works best in Chrome or Edge. Your browser handles speech; nothing is recorded by this site.</div>
+</main>
+
+<script>
+(() => {
+  "use strict";
+
+  const PRESETS = [
+    "What should we know about your life story in a few sentences?",
+    "What’s your #1 superpower?",
+    "What are the top 3 areas you’d like to grow in?",
+    "What misconception do your coworkers have about you?",
+    "How do you push your boundaries and limits?"
+  ];
+
+  const $ = (id) => document.getElementById(id);
+  const el = {
+    accent: $("accent"), voice: $("voice"), muteBtn: $("muteBtn"), clearBtn: $("clearBtn"),
+    micBtn: $("micBtn"), micWrap: $("micWrap"), interim: $("interim"), status: $("status"),
+    chips: $("chips"), chat: $("chat"), empty: $("empty"), form: $("textForm"),
+    input: $("textInput"), sendBtn: $("sendBtn"), badge: $("modelBadge")
+  };
+
+  // ---------------- state ----------------
+  let isProcessing = false;      // locks mic, chips, and send while an answer is generating
+  let isListening = false;
+  let isMuted = false;
+  let cooldownUntil = 0;         // client-side cooldown after a rate-limit response
+  let cooldownTimer = null;
+  let history = [];              // [{role:"user"|"model", text}]
+  let voices = [];
+  let recognition = null;
+  let recHandled = false;        // ensures only the FIRST transcript triggers a request
+  let lastSubmitAt = 0;
+
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} }
+  };
+
+  // ---------------- helpers ----------------
+  function setStatus(text, kind = "") { el.status.textContent = text; el.status.className = "status " + kind; }
+
+  function setLocked(locked) {
+    isProcessing = locked;
+    const coolingDown = Date.now() < cooldownUntil;
+    const disable = locked || coolingDown;
+    el.micBtn.disabled = disable || !SpeechRecognitionCtor;
+    el.sendBtn.disabled = disable;
+    el.input.disabled = locked;
+    el.chips.querySelectorAll("button").forEach((b) => (b.disabled = disable));
+  }
+
+  function addMessage(kind, text) {
+    if (el.empty) { el.empty.remove(); el.empty = null; }
+    const div = document.createElement("div");
+    div.className = "msg " + kind;
+    if (kind === "user" || kind === "bot") {
+      const who = document.createElement("span");
+      who.className = "who";
+      who.textContent = kind === "user" ? "You" : "Me";
+      div.appendChild(who);
+    }
+    div.appendChild(document.createTextNode(text));
+    el.chat.appendChild(div);
+    el.chat.scrollTop = el.chat.scrollHeight;
+    return div;
+  }
+
+  function addTyping() {
+    if (el.empty) { el.empty.remove(); el.empty = null; }
+    const div = document.createElement("div");
+    div.className = "msg bot typing";
+    div.innerHTML = '<span class="who">Me</span><span class="dots"><span></span><span></span><span></span></span>';
+    el.chat.appendChild(div);
+    el.chat.scrollTop = el.chat.scrollHeight;
+    return div;
+  }
+
+  // ---------------- text to speech ----------------
+  const synth = window.speechSynthesis || null;
+
+  function voiceScore(v, accent) {
+    const name = (v.name || "").toLowerCase();
+    const lang = (v.lang || "").replace("_", "-");
+    let score = 0;
+    const isEnglish = lang.toLowerCase().startsWith("en");
+    if (!isEnglish) return -1;
+    if (lang.toLowerCase() === "en-in") score += 100;
+    if (/india|हिन्दी|hindi|heera|ravi|neerja|prabhat|veena|rishi|kalpana|aditi/.test(name)) score += 60;
+    if (lang.toLowerCase() === accent.toLowerCase()) score += 40;
+    if (/google|microsoft|natural|online/.test(name)) score += 8;
+    if (v.localService) score += 2;
+    return score;
+  }
+
+  function loadVoices() {
+    if (!synth) { el.voice.innerHTML = "<option>Speech not supported</option>"; el.voice.disabled = true; return; }
+    const all = synth.getVoices();
+    if (!all.length) return;
+    const accent = el.accent.value;
+    voices = all.map((v) => ({ v, s: voiceScore(v, accent) })).filter((x) => x.s >= 0).sort((a, b) => b.s - a.s || a.v.name.localeCompare(b.v.name));
+    if (!voices.length) voices = all.map((v) => ({ v, s: 0 }));
+    el.voice.innerHTML = "";
+    const indian = voices.filter((x) => x.s >= 60);
+    const rest = voices.filter((x) => x.s < 60);
+    const mk = (x) => { const o = document.createElement("option"); o.value = x.v.name + "||" + x.v.lang; o.textContent = `${x.v.name} (${x.v.lang})`; return o; };
+    if (indian.length) {
+      const g = document.createElement("optgroup"); g.label = "Indian English (recommended)";
+      indian.forEach((x) => g.appendChild(mk(x))); el.voice.appendChild(g);
+    }
+    if (rest.length) {
+      const g = document.createElement("optgroup"); g.label = indian.length ? "Other English voices" : "Available voices";
+      rest.forEach((x) => g.appendChild(mk(x))); el.voice.appendChild(g);
+    }
+    const saved = store.get("voice", "");
+    const match = [...el.voice.options].find((o) => o.value === saved);
+    el.voice.value = match ? match.value : el.voice.options[0].value;
+  }
+
+  function selectedVoice() {
+    if (!synth) return null;
+    const [name, lang] = (el.voice.value || "").split("||");
+    return synth.getVoices().find((v) => v.name === name && v.lang === lang) || null;
+  }
+
+  function speak(text) {
+    if (!synth || isMuted || !text) return;
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    const v = selectedVoice();
+    if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = "en-IN"; }
+    u.rate = 1; u.pitch = 1;
+    u.onstart = () => setStatus("Speaking...", "ok");
+    u.onend = () => { if (!isProcessing && !isListening) setStatus("Tap the mic or pick a question."); };
+    u.onerror = () => {};
+    synth.speak(u);
+  }
+
+  function stopSpeaking() { if (synth) synth.cancel(); }
+
+  // ---------------- speech recognition ----------------
+  const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+
+  function buildRecognition() {
+    if (!SpeechRecognitionCtor) return null;
+    const r = new SpeechRecognitionCtor();
+    r.lang = el.accent.value;
+    r.continuous = false;
+    r.interimResults = true;
+    r.maxAlternatives = 1;
+
+    r.onstart = () => {
+      isListening = true; recHandled = false;
+      el.micWrap.classList.add("listening"); el.micBtn.classList.add("listening");
+      el.micBtn.setAttribute("aria-pressed", "true");
+      el.micBtn.setAttribute("aria-label", "Stop listening");
+      setStatus("Listening... speak now.", "ok");
+    };
+
+    r.onresult = (event) => {
+      if (recHandled) return;
+      let interim = "", final = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const res = event.results[i];
+        if (res.isFinal) final += res[0].transcript; else interim += res[0].transcript;
+      }
+      if (!final) { el.interim.textContent = interim; return; }
+      // First final transcript: stop immediately so no duplicate callbacks can fire.
+      recHandled = true;
+      try { r.stop(); } catch {}
+      el.interim.textContent = "";
+      const text = final.trim();
+      if (text) submitQuestion(text, "voice");
+    };
+
+    r.onerror = (e) => {
+      const map = {
+        "not-allowed": "Microphone permission is blocked. Allow mic access in your browser, or type your question.",
+        "service-not-allowed": "Speech recognition is not allowed here. Try Chrome or Edge, or type your question.",
+        "no-speech": "I did not hear anything. Tap the mic and try again.",
+        "audio-capture": "No microphone found. Connect one, or type your question.",
+        "network": "Speech recognition needs an internet connection. Please try again or type.",
+        "language-not-supported": "This accent is not supported in your browser. Pick another accent.",
+        "aborted": ""
+      };
+      const msg = map[e.error];
+      if (msg === undefined) setStatus("Voice input error: " + e.error, "err");
+      else if (msg) setStatus(msg, e.error === "no-speech" ? "warn" : "err");
+    };
+
+    r.onend = () => {
+      isListening = false;
+      el.micWrap.classList.remove("listening"); el.micBtn.classList.remove("listening");
+      el.micBtn.setAttribute("aria-pressed", "false");
+      el.micBtn.setAttribute("aria-label", "Start speaking");
+      el.interim.textContent = "";
+    };
+    return r;
+  }
+
+  function startListening() {
+    if (isProcessing || isListening || Date.now() < cooldownUntil) return;
+    if (!SpeechRecognitionCtor) { setStatus("Voice input is not supported in this browser. Please type your question.", "warn"); return; }
+    stopSpeaking();
+    recognition = buildRecognition();
+    try { recognition.start(); } catch (err) { setStatus("Could not start the microphone. Please try again.", "err"); }
+  }
+
+  function toggleMic() {
+    if (isListening && recognition) { try { recognition.stop(); } catch {} return; }
+    startListening();
+  }
+
+  // ---------------- chat request ----------------
+  async function submitQuestion(question, source) {
+    const q = question.trim();
+    if (!q || isProcessing) return;
+    if (Date.now() < cooldownUntil) return;
+    if (Date.now() - lastSubmitAt < 1300) return; // client-side burst guard
+    lastSubmitAt = Date.now();
+
+    setLocked(true);
+    stopSpeaking();
+    if (isListening && recognition) { try { recognition.stop(); } catch {} }
+
+    addMessage("user", q);
+    const typing = addTyping();
+    setStatus("Thinking...");
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 45000);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: q, history: history.slice(-16) }),
+        signal: controller.signal
+      });
+      let data = {};
+      try { data = await res.json(); } catch {}
+      typing.remove();
+
+      if (!res.ok) {
+        const msg = data.error || "Something went wrong. Please try again.";
+        addMessage("error", msg);
+        if (res.status === 429 && data.code === "RATE_LIMIT") startCooldown(data.retryAfterSec || 30);
+        else if (res.status === 429) startCooldown(data.retryAfterSec || 2);
+        setStatus(msg, "err");
+        // Remove the unanswered user turn from context
+        return;
+      }
+
+      history.push({ role: "user", text: q }, { role: "model", text: data.reply });
+      addMessage("bot", data.reply);
+      setStatus("Answer ready.", "ok");
+      speak(data.reply);
+    } catch (err) {
+      typing.remove();
+      const msg = err.name === "AbortError" ? "That took too long. Please try again." : "Network problem. Check your connection and try again.";
+      addMessage("error", msg);
+      setStatus(msg, "err");
+    } finally {
+      clearTimeout(timeout);
+      setLocked(false);
+    }
+  }
+
+  function startCooldown(seconds) {
+    cooldownUntil = Date.now() + seconds * 1000;
+    clearInterval(cooldownTimer);
+    const tick = () => {
+      const left = Math.ceil((cooldownUntil - Date.now()) / 1000);
+      if (left <= 0) {
+        clearInterval(cooldownTimer);
+        setLocked(false);
+        setStatus("Ready. Ask me another question.", "ok");
+      } else {
+        setLocked(isProcessing);
+        if (seconds > 3) setStatus(`Rate limit reached. You can ask again in ${left}s.`, "warn");
+      }
+    };
+    tick();
+    cooldownTimer = setInterval(tick, 1000);
+  }
+
+  // ---------------- wire up UI ----------------
+  PRESETS.forEach((q) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip"; b.textContent = q;
+    b.addEventListener("click", () => submitQuestion(q, "preset"));
+    el.chips.appendChild(b);
+  });
+
+  el.micBtn.addEventListener("click", toggleMic);
+
+  el.form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const v = el.input.value;
+    if (!v.trim() || isProcessing) return;
+    el.input.value = "";
+    submitQuestion(v, "text");
+  });
+
+  el.muteBtn.addEventListener("click", () => {
+    stopSpeaking();
+    isMuted = !isMuted;
+    el.muteBtn.classList.toggle("active", isMuted);
+    el.muteBtn.textContent = isMuted ? "Unmute" : "Stop / Mute";
+    store.set("muted", isMuted ? "1" : "0");
+    setStatus(isMuted ? "Voice answers are muted. Replies still appear as text." : "Voice answers are on.", isMuted ? "warn" : "ok");
+  });
+
+  el.clearBtn.addEventListener("click", () => {
+    if (isProcessing) return;
+    stopSpeaking();
+    history = [];
+    el.chat.innerHTML = '<div class="empty" id="empty">Your conversation will appear here.</div>';
+    el.empty = $("empty");
+    setStatus("Conversation cleared.");
+  });
+
+  el.accent.addEventListener("change", () => {
+    store.set("accent", el.accent.value);
+    loadVoices();
+    if (isListening && recognition) { try { recognition.abort(); } catch {} }
+    setStatus("Accent set to " + el.accent.options[el.accent.selectedIndex].text + ".", "ok");
+  });
+
+  el.voice.addEventListener("change", () => {
+    store.set("voice", el.voice.value);
+    speak("Hello, this is how I will sound.");
+  });
+
+  // restore saved settings
+  const savedAccent = store.get("accent", "en-IN");
+  if ([...el.accent.options].some((o) => o.value === savedAccent)) el.accent.value = savedAccent;
+  isMuted = store.get("muted", "0") === "1";
+  if (isMuted) { el.muteBtn.classList.add("active"); el.muteBtn.textContent = "Unmute"; }
+
+  if (synth) {
+    loadVoices();
+    if (typeof synth.onvoiceschanged !== "undefined") synth.onvoiceschanged = loadVoices;
+    // Some browsers populate voices late
+    setTimeout(loadVoices, 400); setTimeout(loadVoices, 1500);
+  } else {
+    el.voice.innerHTML = "<option>Speech output not supported</option>"; el.voice.disabled = true; el.muteBtn.disabled = true;
+  }
+
+  if (!SpeechRecognitionCtor) {
+    el.micBtn.disabled = true;
+    setStatus("Voice input is not supported in this browser. Use the preset questions or type below (Chrome or Edge recommended).", "warn");
+  }
+
+  // Health check: warn early if the server key is missing
+  fetch("/api/health").then((r) => r.json()).then((h) => {
+    if (h && h.model) el.badge.textContent = h.model;
+    if (h && h.keyConfigured === false) setStatus("Server setup incomplete: GEMINI_API_KEY is missing.", "err");
+  }).catch(() => {});
+
+  window.addEventListener("beforeunload", () => { stopSpeaking(); try { recognition && recognition.abort(); } catch {} });
+})();
+</script>
+</body>
+</html>
